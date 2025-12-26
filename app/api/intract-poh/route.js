@@ -1,25 +1,19 @@
 import axios from "axios";
 import { NextResponse } from "next/server";
 
-// GET /api/check-poh?wallet=0x...   OR   ?address=0x...
+// GET /api/intract-poh?address=0x...
 export async function GET(request) {
   try {
     const url = new URL(request.url);
     const searchParams = url.searchParams;
 
-    // Accept both ?wallet= and ?address=
-    const wallet = (
-      searchParams.get("wallet") ||
-      searchParams.get("address") ||
-      ""
-    ).toLowerCase();
+    const wallet = (searchParams.get("address") || "").toLowerCase();
 
-    // Basic sanity check (we let Linea PoH decide the rest)
     if (!wallet || !wallet.startsWith("0x")) {
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid or missing wallet address."
+          message: "Invalid wallet address"
         },
         {
           status: 200,
@@ -37,12 +31,11 @@ export async function GET(request) {
     try {
       resp = await axios.get(pohUrl, { timeout: 8000 });
     } catch (error) {
-      console.error("Linea PoH API Error:", error?.message || error);
+      console.error("Linea PoH API Error (Intract):", error?.message || error);
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Unable to reach Linea PoH service. Please try again shortly."
+          message: "Linea PoH service unavailable"
         },
         {
           status: 200,
@@ -56,11 +49,6 @@ export async function GET(request) {
 
     const data = resp.data;
 
-    // Handle common response shapes:
-    // 1) true / false
-    // 2) { verified: true }
-    // 3) { isVerified: true }
-    // 4) { status: "VERIFIED" }
     let isVerified = false;
 
     if (typeof data === "boolean") {
@@ -82,12 +70,7 @@ export async function GET(request) {
       return NextResponse.json(
         {
           success: true,
-          message: "Wallet is PoH verified on Linea.",
-          data: {
-            verified: true,
-            source: "linea_poh_api",
-            raw: data
-          }
+          message: "Wallet is PoH verified on Linea."
         },
         {
           status: 200,
@@ -102,12 +85,7 @@ export async function GET(request) {
         {
           success: false,
           message:
-            "Wallet is NOT PoH verified on Linea. Complete the Linea PoH flow first.",
-          data: {
-            verified: false,
-            source: "linea_poh_api",
-            raw: data
-          }
+            "Wallet is NOT PoH verified on Linea. Complete the Linea PoH flow first."
         },
         {
           status: 200,
@@ -119,7 +97,7 @@ export async function GET(request) {
       );
     }
   } catch (err) {
-    console.error("Unexpected API error:", err?.message || err);
+    console.error("Unexpected Intract PoH error:", err?.message || err);
     return NextResponse.json(
       {
         success: false,
